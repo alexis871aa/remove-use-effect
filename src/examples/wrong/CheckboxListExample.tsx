@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { getCheckboxState } from "./checkbox-utils.ts";
 
 // interface TodoItem {
 //   id: number;
@@ -6,9 +7,15 @@ import React, { useState } from "react";
 //   completed: boolean;
 // }
 
-const saveCheckboxes = (checkboxes: number[]) => {
-  localStorage.setItem("checkboxes", JSON.stringify(checkboxes));
-};
+const defaultCheckboxes = [
+  { id: 1, text: "Text 1" },
+  { id: 2, text: "Text 2" },
+  { id: 3, text: "Text 3" },
+];
+
+// const saveCheckboxes = (checkboxes: number[]) => {
+//   localStorage.setItem("checkboxes", JSON.stringify(checkboxes));
+// };
 
 export const CheckboxListExample: React.FC = () => {
   // const [todos, setTodos] = useState<TodoItem[]>([
@@ -88,42 +95,84 @@ export const CheckboxListExample: React.FC = () => {
   //     </div>
   // );
 
-  // CODE WITHOUT USE EFFECT
+  // const [checkedCheckboxes, setCheckedCheckboxes] = useState<number[]>(() =>
+  //   localStorage.getItem("checkboxes")
+  //     ? (JSON.parse(localStorage.getItem("checkboxes") ?? "[]") as number[])
+  //     : [],
+  // );
+  //
+  // const handleToggle = (id: number) => {
+  //   setCheckedCheckboxes((prev) => {
+  //     if (prev.includes(id)) {
+  //       return prev.filter((c) => c !== id);
+  //     } else {
+  //       return [...prev, id];
+  //     }
+  //   });
+  // };
+  //
+  // const isAllChecked = checkedCheckboxes.length === checkboxes.length;
+  //
+  // const handleCheckAll = () => {
+  //   if (isAllChecked) {
+  //     setCheckedCheckboxes([]);
+  //   } else {
+  //     setCheckedCheckboxes(checkboxes.map((c) => c.id));
+  //   }
+  // };
+  //
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+  //   saveCheckboxes(checkedCheckboxes);
+  // };
 
-  const checkboxes = [
-    { id: 1, text: "Text 1" },
-    { id: 2, text: "Text 2" },
-    { id: 3, text: "Text 3" },
-  ];
-  const [checkedCheckboxes, setCheckedCheckboxes] = useState<number[]>(() =>
-    localStorage.getItem("checkboxes")
-      ? (JSON.parse(localStorage.getItem("checkboxes") ?? "[]") as number[])
-      : [],
-  );
+  // Вариант, когда чекбокс обновился и список чекбоксов изменился
+  const [checkboxes, setCheckBoxes] = useState(defaultCheckboxes);
+
+  // имитация получения данных с сервера и обновление списка чекбоксов
+  useEffect(() => {
+    const clear = setTimeout(() => {
+      setCheckBoxes((c) => {
+        return [...c, { id: 4, text: "Text 4" }];
+      });
+    }, 5000);
+
+    return () => clearTimeout(clear);
+  }, []);
+
+  // ДАЛЕЕ КОД БЕЗ USE EFFECT
+  const [userIsAllChecked, setUserIsAllChecked] = useState(false);
+  const [userCheckedCheckboxes, setUserCheckedCheckboxes] = useState<
+    Record<number, boolean | undefined>
+  >({});
+
+  const { isAllChecked, getIsChecked } = getCheckboxState({
+    userCheckedCheckboxes,
+    checkboxesLength: checkboxes.length,
+    userIsAllChecked,
+  });
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+  };
 
   const handleToggle = (id: number) => {
-    setCheckedCheckboxes((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((c) => c !== id);
+    setUserCheckedCheckboxes((prev) => {
+      if (getIsChecked(id)) {
+        return { ...prev, [id]: false };
       } else {
-        return [...prev, id];
+        return { ...prev, [id]: true };
       }
     });
   };
 
-  const isAllChecked = checkedCheckboxes.length === checkboxes.length;
-
   const handleCheckAll = () => {
     if (isAllChecked) {
-      setCheckedCheckboxes([]);
+      setUserIsAllChecked(false);
     } else {
-      setCheckedCheckboxes(checkboxes.map((c) => c.id));
+      setUserIsAllChecked(true);
+      setUserCheckedCheckboxes({});
     }
-  };
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    saveCheckboxes(checkedCheckboxes);
   };
 
   return (
@@ -167,14 +216,14 @@ export const CheckboxListExample: React.FC = () => {
             >
               <input
                 type="checkbox"
-                checked={checkedCheckboxes.includes(checkbox.id)}
+                checked={getIsChecked(checkbox.id)}
                 onChange={() => handleToggle(checkbox.id)}
               />
               {checkbox.text}
             </label>
           ))}
         </div>
-        <button type="submit">Отправить</button>
+        {/*<button type="submit">Отправить</button>*/}
       </form>
     </div>
   );
